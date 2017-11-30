@@ -2,6 +2,7 @@ import time
 import mido
 import itertools
 from itertools import product
+from pyo import *
 
 Cmadd2 = [48, 62, 63, 67]
 Cm7 = [48, 55, 63, 70]
@@ -32,9 +33,9 @@ Cm7b5_2 = [48, 54, 63, 70]
 allchords={'Cmadd2' : Cmadd2,'Cm7' : Cm7,'Cadd2' : Cadd2, 'CM7' : CM7, 'C7' : C7, 'C9' : C9, 
 	'CM9' : CM9, 'Cm7M13' : Cm7M13, 'Cm11' : Cm11, 'CmM7' : CmM7, 'CmM7_2': CmM7_2, 'CM7s11' : CM7s11, 'Cm9_2' : Cm9_2, 'Cm9' : Cm9,
 	'CMaj9' : CMaj9, 'CM9_2':CM9_2, 'C7s9':C7s9,'CM7s5':CM7s5,'Cm7b5':Cm7b5,'Cm7b5_2':Cm7b5_2, }
-allRhythms = {'.':[0.5],'I' : [1.0], ':' : [0.5, 0.5], 'v' : [-0.5,0.5], ' V' : [-0.5,0.5], 'X': [0.5,1.0], 'x': [0.5,1.0], '>' : [1.0,0.5], '<' : [-0.5,1.0], 'w' : [-0.5,-0.5,0.5], 'W' : [-0.5,-0.5,0.5], '+' : [-0.5,0.5,0.5], 'i' : [0.5,0.5,0.5], '-' : [1.5]};
+allRhythms = {'.':[1],'I' : [2], ':' : [1,1], 'v' : [-1,1], ' V' : [-1,1], 'X': [1,2], 'x': [1,2], '>' : [2,1], '<' : [-1,2], 'w' : [-1,-1,1], 'W' : [-1,-1,1], '+' : [-1,1,1], 'i' : [1,1,1], '-' : [3]};
 
-inputs = ['.','I',':','v','V','W','x','X','>','<','w','+','i','~','(',')'];
+inputs = ['.','I',':','v','V','W','x','X','>','<','w','+','i','~','(',')','-'];
 
 
 def pitchclass(chord):
@@ -151,6 +152,25 @@ def userRythm():
 			rhythmFinal.append(rhythmAltered[j]);
 			j += 1;
 
+	
+
+	i = 0;
+	while i < len(rhythmFinal):
+		if(rhythmFinal[0] <= 0):
+			del(rhythmFinal[0]);
+			continue; 
+
+		if(rhythmFinal[i] < 0 and i != 0):
+			rhythmFinal[i-1] = -1 * rhythmFinal[i] + rhythmFinal[i-1];
+			del(rhythmFinal[i]);
+			continue;
+		i += 1; 
+
+
+
+
+
+
 	print rhythmFinal;
 	return rhythmFinal;
 
@@ -195,17 +215,17 @@ def play():
 	bassLinesLen = len(basslines);
 	velLen = len(velocityList);
 
-	for k in range(len(rhythmFinal)):
-		if(rhythmFinal[k] < 0):
-			print("Rhythm");
-			print rhythmFinal[k];
-			play_midi_chord(port, allchords[chords[k%chordLen]], basslines[k%bassLinesLen], -1 * rhythmFinal[k], 0);
-			skip += 1;
+	# for k in range(len(rhythmFinal)):
+	# 	if(rhythmFinal[k] < 0):
+	# 		print("Rhythm");
+	# 		print rhythmFinal[k];
+	# 		play_midi_chord(port, allchords[chords[k%chordLen]], basslines[k%bassLinesLen], -1 * rhythmFinal[k], 0);
+	# 		skip += 1;
 			
-		else: 
-			print rhythmFinal[k];
-			play_midi_chord(port, allchords[chords[(k - skip)%len(chords)]], basslines[(k - skip) % bassLinesLen],
-				rhythmFinal[k], velocityList[(k - skip) % velLen]);
+	# 	else: 
+	# 		print rhythmFinal[k];
+	# 		play_midi_chord(port, allchords[chords[(k - skip)%len(chords)]], basslines[(k - skip) % bassLinesLen],
+	# 			rhythmFinal[k], velocityList[(k - skip) % velLen]);
 			
 
 
