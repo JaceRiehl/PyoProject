@@ -65,33 +65,33 @@ def transpose(chord, fundamental):
         result.append(k + fundamental)
     return result
 
-port = mido.open_output()
+# port = mido.open_output()
 
-def make_midi_chord(chord, fundamental, vel):
-    result = []
-    newchord = transpose(chord, fundamental)
-    for k in newchord:
-        result.append(mido.Message('note_on', note=k, velocity = vel))
-        print("Midi Chord: ")
-        print k;
-    return result
+# def make_midi_chord(chord, fundamental, vel):
+#     result = []
+#     newchord = transpose(chord, fundamental)
+#     for k in newchord:
+#         result.append(mido.Message('note_on', note=k, velocity = vel))
+#         print("Midi Chord: ")
+#         print k;
+#     return result
 
-def midi_chord_off(chord, fundamental): 
-    result = []
-    newchord = transpose(chord, fundamental)
-    for k in newchord:
-        result.append(mido.Message('note_off', note=k))
-    return result
+# def midi_chord_off(chord, fundamental): 
+#     result = []
+#     newchord = transpose(chord, fundamental)
+#     for k in newchord:
+#         result.append(mido.Message('note_off', note=k))
+#     return result
 
-def play_midi_chord(out, chord, fund, dur, vel):
-    mchord = make_midi_chord (chord, (fund), vel)
-    for n in mchord:
-        out.send(n)
-    time.sleep(dur)
-    mchord = midi_chord_off (chord, (fund))
-    for n in mchord:
-        out.send(n)
-    print("Exiting play_midi_chord")
+# def play_midi_chord(out, chord, fund, dur, vel):
+#     mchord = make_midi_chord (chord, (fund), vel)
+#     for n in mchord:
+#         out.send(n)
+#     time.sleep(dur)
+#     mchord = midi_chord_off (chord, (fund))
+#     for n in mchord:
+#         out.send(n)
+#     print("Exiting play_midi_chord")
 
 
 
@@ -220,18 +220,25 @@ def play():
 
 	met = Metro(time=.2, poly=1).play()
 	
-	env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
+	# env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
+	env = CosTable([(0,0), (50,1), (250,.3), (8191,0)])
 	# seq = Seq(time=.2, seq=rhythmFinal, poly=1).play()
 	amp = TrigEnv(met, table=env, dur=.25, mul=.2)
 	it = Iter(met, choice=freq_x)
 	
-	a = SineLoop(freq=it, feedback=0.09, mul=amp).out()
-	
+	a = SineLoop(freq=it, feedback=0.09, mul=amp)
+	a.ctrl()
+	b = Sine(freq=it, mul=amp)
+	b.ctrl()
+	# a = CrossFM(carrier=[250.5,250], ratio=[.2499,.2502], ind1=tr, ind2=tr, mul=.2).out(
+	# a = FastSine(freq=it, quality=1, mul=0.02, add=1)
+	# syn = FastSine(freq=500*a, quality=1, mul=0.4).out()
+	sel = Selector([a,b]).out()
+	sel.ctrl(title="Input interpolator (0=SineLoop, 1=Sine)")
+	sp = Spectrum(sel)
 	n = PinkNoise(.5)
-	f = BandSplit(n, num=6, min=250, max=4000, q=5, mul=a).out()
+	f = BandSplit(n, num=6, min=250, max=4000, q=5, mul=sel).out()
 	s.gui(locals())
-
-
 
 
 	# for k in range(len(rhythmFinal)):
@@ -246,14 +253,5 @@ def play():
 	# 		play_midi_chord(port, allchords[chords[(k - skip)%len(chords)]], basslines[(k - skip) % bassLinesLen],
 	# 			rhythmFinal[k], velocityList[(k - skip) % velLen]);
 			
-
-
-
-
-
-
-
-
-
 
 play();
