@@ -47,7 +47,7 @@ def pitchclass(chord):
     return result
 
 def pitch_delta (pitches):
-    result = []
+    result = list()
     for n in range(len(pitches)):
         result.append((pitches[n] - pitches[0]))
     return result
@@ -58,11 +58,19 @@ def delta_x (pitches):
         result.append((pitches[n+1] - pitches[n]))
     return result
 
-def transpose(chord, fundamental):
-    result = []
-    delta = pitch_delta(chord)
+def transpose(chords, fundamental):
+    result = list();
+    delta = list(); 
+    funIndex = 0;
+    for i in chords:
+    	delta.append(pitch_delta(i))
     for k in delta:
-        result.append(k + fundamental)
+    	for i in k:
+    		result.append(i + fundamental[funIndex])
+    	if(funIndex < len(fundamental)-1):
+    		funIndex += 1
+    	else:
+    		funIndex = 0
     return result
 
 # port = mido.open_output()
@@ -175,7 +183,7 @@ def enterChord():
 	chord = raw_input("Please enter a string of chord symbols: ")
 
 	for k in chord.split(' '):
-		chords.append(k.strip());
+		chords.append(allchords[k.strip()]);
 		print chords;
 	return chords;
 
@@ -195,49 +203,54 @@ def enterVelocity():
 	vel = raw_input("Please enter a string of velocities (between 0 and 127): ")
 
 	for k in vel.split(' '):
-		velocityList.append(int(k.strip()));
-		print velocityList;
-
+		if(int(k.strip()) <= 127 and int(k.strip()) >= 0):
+			velocityList.append(float(k.strip())/127);
+		
+	print velocityList;
 	return velocityList;
+
+
 	
 def play():
 	freq_x = list()
 	rhythmFinal = userRythm();
 	chords = enterChord();
-	# basslines = enterTransposition();
-	# velocityList = enterVelocity();
+	basslines = enterTransposition();
+	velocityList = enterVelocity();
 	# skip = 0;
 	# chordLen = len(chords); 
 	# bassLinesLen = len(basslines);
 	# velLen = len(velocityList);
+	transChords = list()
+	
+	transChords = transpose(chords, basslines)
 
-	# chord_x = [48, 55, 64, 70]
-	for i in chords:
-		freq_x.append(midiToHz(allchords[i]))
-	# freq_x = midiToHz(chord_x)
+	for i in transChords:
+		freq_x.append(midiToHz(i))
 
 	s = Server().boot()
 
-	met = Metro(time=.2, poly=1).play()
+	# met = Metro(time=.2, poly=1).play()
 	
 	# env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
 	env = CosTable([(0,0), (50,1), (250,.3), (8191,0)])
-	# seq = Seq(time=.2, seq=rhythmFinal, poly=1).play()
-	amp = TrigEnv(met, table=env, dur=.25, mul=.2)
-	it = Iter(met, choice=freq_x)
-	
-	a = SineLoop(freq=it, feedback=0.09, mul=amp)
+	seq = Seq(time=.2, seq=rhythmFinal, poly=1).play()
+	amp = TrigEnv(seq, table=env, dur=.25, mul=velocityList)
+	it = Iter(seq, choice=freq_x)
+	lfo = Sine(freq=it, mul=amp)
+	lfo.ctrl()
+	a = SineLoop(freq=it, feedback=lfo, mul=amp).out()
 	a.ctrl()
-	b = Sine(freq=it, mul=amp)
-	b.ctrl()
+	b = FastSine(freq=500*lfo, quality=1, mul=amp).out()
 	# a = CrossFM(carrier=[250.5,250], ratio=[.2499,.2502], ind1=tr, ind2=tr, mul=.2).out(
 	# a = FastSine(freq=it, quality=1, mul=0.02, add=1)
 	# syn = FastSine(freq=500*a, quality=1, mul=0.4).out()
-	sel = Selector([a,b]).out()
-	sel.ctrl(title="Input interpolator (0=SineLoop, 1=Sine)")
+	sel = Selector([a,b])
+	sel.ctrl(title="Input interpolator (0=SineLoop, 1=FastSine)")
 	sp = Spectrum(sel)
 	n = PinkNoise(.5)
 	f = BandSplit(n, num=6, min=250, max=4000, q=5, mul=sel).out()
+	f.ctrl()
 	s.gui(locals())
 
 
