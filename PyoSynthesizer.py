@@ -40,26 +40,15 @@ allRhythms = {'.':[1],'I' : [2], ':' : [1,1], 'v' : [-1,1], ' V' : [-1,1], 'X': 
 inputs = ['.','I',':','v','V','W','x','X','>','<','w','+','i','~','(',')','-'];
 
 
-def pitchclass(chord):
-    #takes a list of pitches numbers and prints note names
-    pc = ['c','c#','d','d#','e','f','f#','g','g#','a','a#','b']
-    result = []
-    for n in range (len(chord)):
-        result.append (pc[chord[n] % 12])
-    return result
-
 def pitch_delta (pitches):
     result = list()
     for n in range(len(pitches)):
         result.append((pitches[n] - pitches[0]))
     return result
 
-def delta_x (pitches):
-    result = []
-    for n in range(len(pitches)-1):
-        result.append((pitches[n+1] - pitches[n]))
-    return result
 
+#Function for appyling the basslines that the user has inputted onto the chords that they inputted
+#it takes each as a parameter as a list and it loops the basslines based on the amount of chords inputted
 def transpose(chords, fundamental):
     result = list();
     delta = list(); 
@@ -75,36 +64,8 @@ def transpose(chords, fundamental):
     		funIndex = 0
     return result
 
-# port = mido.open_output()
 
-# def make_midi_chord(chord, fundamental, vel):
-#     result = []
-#     newchord = transpose(chord, fundamental)
-#     for k in newchord:
-#         result.append(mido.Message('note_on', note=k, velocity = vel))
-#         print("Midi Chord: ")
-#         print k;
-#     return result
-
-# def midi_chord_off(chord, fundamental): 
-#     result = []
-#     newchord = transpose(chord, fundamental)
-#     for k in newchord:
-#         result.append(mido.Message('note_off', note=k))
-#     return result
-
-# def play_midi_chord(out, chord, fund, dur, vel):
-#     mchord = make_midi_chord (chord, (fund), vel)
-#     for n in mchord:
-#         out.send(n)
-#     time.sleep(dur)
-#     mchord = midi_chord_off (chord, (fund))
-#     for n in mchord:
-#         out.send(n)
-#     print("Exiting play_midi_chord")
-
-
-
+#Function for prompting the user to input a list of Rhythms
 def userRythm():
 
 	rhythm = list();
@@ -179,7 +140,7 @@ def userRythm():
 	print rhythmFinal;
 	return rhythmFinal;
 
-
+ #Function for prompting the user to input a list of chords from the ones i have provided in the code
 def enterChord():
 	chords = list();
 	chord = raw_input("Please enter a string of chord symbols: ")
@@ -189,7 +150,7 @@ def enterChord():
 		print chords;
 	return chords;
 
-
+#Function for prompting the user to input a list of basslines
 def enterTransposition():
 	basslines = list();
 	bassline = raw_input("Please enter a string of bass lines: ")
@@ -199,7 +160,7 @@ def enterTransposition():
 		print basslines;
 	return basslines;
 
-
+#Function for prompting the user to input a list of velocities
 def enterVelocity():
 	velocityList = list();
 	vel = raw_input("Please enter a string of velocities (between 0 and 127): ")
@@ -219,17 +180,10 @@ def play():
 	chords = enterChord();
 	basslines = enterTransposition();
 	velocityList = enterVelocity();
-	# skip = 0;
-	# chordLen = len(chords); 
-	# bassLinesLen = len(basslines);
-	# velLen = len(velocityList);
+
 	transChords = list()
-	
 	transChords = transpose(chords, basslines)
 
-	# path = input("Where do you want the recorded audio to be placed? ex. Desktop/FinalProject ")
-	path = "/"
-	# filename = input("What do you want your file name to be? ")
 	for i in transChords:
 		freq_x.append(midiToHz(i))
 
@@ -237,6 +191,7 @@ def play():
 	# home = os.path.expanduser('~')
 	s = Server().boot()
 	# s.start()
+	#I tried this to record my audio but it didn't work, the audio never plays
 	# s.recordOptions(dur=60, filename="./testFile.wav", fileformat=0, sampletype=0, quality=0.9)
 	# met = Metro(time=.2, poly=1).play()
 	
@@ -245,37 +200,34 @@ def play():
 	seq = Seq(time=.2, seq=rhythmFinal, poly=1).play()
 	amp = TrigEnv(seq, table=env, dur=.25, mul=velocityList)
 	it = Iter(seq, choice=freq_x)
+	#Low frequency Oscolator
 	lfo = Sine(freq=it, mul=amp)
+	#display control pannel 
 	lfo.ctrl()
+	#synthesizer 
 	a = SineLoop(freq=it, feedback=lfo, mul=amp)
 	a.ctrl()
+	#I tried FastSine but it distorts my audio so I didn't end up adding it to the Selector
 	# b = FastSine(freq=500*lfo, quality=1, mul=amp)
-	# a = CrossFM(carrier=[250.5,250], ratio=[.2499,.2502], ind1=tr, ind2=tr, mul=.2).out(
-	# a = FastSine(freq=it, quality=1, mul=0.02, add=1)
-	# syn = FastSine(freq=500*a, quality=1, mul=0.4).out()
-	sel = Selector([a,lfo])
+	
+	
+
+	#Filter 
+	f = BandSplit(a, num=6, min=250, max=4000, q=5, mul=lfo).out()
+	f.ctrl()
+
+	# f2 = BandSplit(b, num=6, min=250, max=4000, q=5, mul=lfo).out()
+	# f.ctrl()
+
+	sel = Selector([f, lfo])
 	sel.ctrl(title="Input interpolator (0=SineLoop, 1=Sine)")
 	sp = Spectrum(sel)
-	n = PinkNoise(.5)
-	f = BandSplit(n, num=6, min=250, max=4000, q=5, mul=sel).out()
-	f.ctrl()
-	rec = Record(f, filename="./someFile.wav",chnls=2, fileformat=0, sampletype=2)
+
+	#Record
+	rec = Record(sp, filename="./JRiehlPyo.wav",chnls=2, fileformat=0, sampletype=2)
 	clean = Clean_objects(65, rec)
 	clean.start()
+
 	s.gui(locals())
-
-
-	# for k in range(len(rhythmFinal)):
-	# 	if(rhythmFinal[k] < 0):
-	# 		print("Rhythm");
-	# 		print rhythmFinal[k];
-	# 		play_midi_chord(port, allchords[chords[k%chordLen]], basslines[k%bassLinesLen], -1 * rhythmFinal[k], 0);
-	# 		skip += 1;
-			
-	# 	else: 
-	# 		print rhythmFinal[k];
-	# 		play_midi_chord(port, allchords[chords[(k - skip)%len(chords)]], basslines[(k - skip) % bassLinesLen],
-	# 			rhythmFinal[k], velocityList[(k - skip) % velLen]);
-			
 
 play();
