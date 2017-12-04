@@ -3,6 +3,8 @@ import mido
 import itertools
 from itertools import product
 from pyo import *
+from random import uniform
+import os
 
 Cmadd2 = [48, 62, 63, 67]
 Cm7 = [48, 55, 63, 70]
@@ -225,11 +227,17 @@ def play():
 	
 	transChords = transpose(chords, basslines)
 
+	# path = input("Where do you want the recorded audio to be placed? ex. Desktop/FinalProject ")
+	path = "/"
+	# filename = input("What do you want your file name to be? ")
 	for i in transChords:
 		freq_x.append(midiToHz(i))
 
-	s = Server().boot()
 
+	# home = os.path.expanduser('~')
+	s = Server().boot()
+	# s.start()
+	# s.recordOptions(dur=60, filename="./testFile.wav", fileformat=0, sampletype=0, quality=0.9)
 	# met = Metro(time=.2, poly=1).play()
 	
 	# env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
@@ -239,18 +247,21 @@ def play():
 	it = Iter(seq, choice=freq_x)
 	lfo = Sine(freq=it, mul=amp)
 	lfo.ctrl()
-	a = SineLoop(freq=it, feedback=lfo, mul=amp).out()
+	a = SineLoop(freq=it, feedback=lfo, mul=amp)
 	a.ctrl()
-	b = FastSine(freq=500*lfo, quality=1, mul=amp).out()
+	# b = FastSine(freq=500*lfo, quality=1, mul=amp)
 	# a = CrossFM(carrier=[250.5,250], ratio=[.2499,.2502], ind1=tr, ind2=tr, mul=.2).out(
 	# a = FastSine(freq=it, quality=1, mul=0.02, add=1)
 	# syn = FastSine(freq=500*a, quality=1, mul=0.4).out()
-	sel = Selector([a,b])
-	sel.ctrl(title="Input interpolator (0=SineLoop, 1=FastSine)")
+	sel = Selector([a,lfo])
+	sel.ctrl(title="Input interpolator (0=SineLoop, 1=Sine)")
 	sp = Spectrum(sel)
 	n = PinkNoise(.5)
 	f = BandSplit(n, num=6, min=250, max=4000, q=5, mul=sel).out()
 	f.ctrl()
+	rec = Record(f, filename="./someFile.wav",chnls=2, fileformat=0, sampletype=2)
+	clean = Clean_objects(65, rec)
+	clean.start()
 	s.gui(locals())
 
 
